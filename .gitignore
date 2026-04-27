@@ -1,0 +1,22 @@
+# Environment variables — NEVER upload these
+.env
+
+# VS Code settings
+.vscode/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environment
+venv/
+env/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Huggingface model cache (too large)
+*.bin
+*.safetensors
