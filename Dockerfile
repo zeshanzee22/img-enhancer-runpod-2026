@@ -4,11 +4,6 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-RUN python -c "
-from transformers import AutoImageProcessor, Swin2SRForImageSuperResolution
-AutoImageProcessor.from_pretrained('caidas/swin2SR-realworld-sr-x4-64-bsrgan-psnr')
-Swin2SRForImageSuperResolution.from_pretrained('caidas/swin2SR-realworld-sr-x4-64-bsrgan-psnr')
-"
 
 
 # 3. Copy your code
