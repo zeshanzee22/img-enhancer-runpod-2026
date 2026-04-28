@@ -12,41 +12,41 @@ import time
 import os
 from dotenv import load_dotenv
 
-#  Load .env for local machine
+# Load .env for local machine
 # On RunPod Serverless, env vars are set in dashboard — load_dotenv() is ignored there
 load_dotenv()
 
-#Logging
+# Logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-#  Cloudinary reads from .env locally, from RunPod dashboard on serverless 
+# Cloudinary reads from .env locally, from RunPod dashboard on serverless
 cloudinary.config(
     cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
     api_key=os.environ.get("CLOUDINARY_API_KEY"),
     api_secret=os.environ.get("CLOUDINARY_API_SECRET")
 )
 
-#  Model Cache Path 
-# Locally:  saves to C:/Users/YOU/.cache/huggingface  (downloads once, reuses forever)
-# RunPod:   baked into Docker image at build time (never downloads at runtime)
+# Model name
+# Locally:  downloads once and caches to ~/.cache/huggingface
+# RunPod:   downloads from HuggingFace on every cold start
 MODEL_NAME = "caidas/swin2SR-realworld-sr-x4-64-bsrgan-psnr"
 
 logging.info("Loading Swin2SR model...")
 processor = AutoImageProcessor.from_pretrained(MODEL_NAME)
 model = Swin2SRForImageSuperResolution.from_pretrained(MODEL_NAME)
 model.eval()
+
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model.to(device)
-# Clear log so you always know where its running
+
 if device == "cuda":
     gpu_name = torch.cuda.get_device_name(0)
-    logging.info(f"🚀 Running on GPU: {gpu_name}")
+    logging.info(f"Running on GPU: {gpu_name}")
 else:
-    logging.info(f"🐢 Running on CPU (no GPU available)")
-# logging.info(f"Model ready on {device}!")
+    logging.info("Running on CPU (no GPU available)")
 
 
 def handler(job):
@@ -57,7 +57,7 @@ def handler(job):
     logging.info("New job received.")
     job_input = job["input"]
 
-    #  Validate Input
+    # Validate Input
     if "image_url" not in job_input:
         logging.error("Missing image_url in input")
         return {"error": "Missing 'image_url' in input"}
@@ -65,7 +65,7 @@ def handler(job):
     image_url = job_input["image_url"]
     logging.info(f"Processing image from: {image_url}")
 
-    #  Download Image 
+    # Download Image
     try:
         response = requests.get(image_url, timeout=30)
         response.raise_for_status()
@@ -78,7 +78,7 @@ def handler(job):
         logging.error(f"Image open failed: {e}")
         return {"error": f"Failed to open image: {str(e)}"}
 
-    #  Memory-safe Resize 
+    # Memory-safe Resize
     MAX_SIZE = 400 if device == "cpu" else 800
     w, h = image.size
     if max(w, h) > MAX_SIZE:
@@ -88,7 +88,7 @@ def handler(job):
 
     original_size = list(image.size)
 
-    #  Enhance with Swin2SR 
+    # Enhance with Swin2SR
     try:
         logging.info("Running Swin2SR enhancement...")
         stime = time.perf_counter()
@@ -109,13 +109,13 @@ def handler(job):
         )
         result = Image.fromarray((output * 255).astype(np.uint8))
         etime = time.perf_counter()
-        logging.info(f"Done in {etime-stime:.2f}s. Enhanced size: {result.size}")
+        logging.info(f"Done in {etime - stime:.2f}s. Enhanced size: {result.size}")
 
     except Exception as e:
         logging.error(f"Enhancement failed: {e}")
         return {"error": f"Enhancement failed: {str(e)}"}
 
-    # Upload to Cloudinary 
+    # Upload to Cloudinary
     try:
         buffer = io.BytesIO()
         result.save(buffer, format="JPEG")
@@ -133,7 +133,7 @@ def handler(job):
         logging.error(f"Cloudinary upload failed: {e}")
         return {"error": f"Cloudinary upload failed: {str(e)}"}
 
-    #  Return Result 
+    # Return Result
     return {
         "enhanced_image_url": enhanced_url,
         "original_size": original_size,
