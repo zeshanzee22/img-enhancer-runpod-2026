@@ -47,7 +47,7 @@ else:
 
 def handler(job):
     """RunPod handler — called once per job."""
-    logging.info("New job received.")
+    logging.info("New request received.")
     job_input = job.get("input", {})
 
     # Validate input
