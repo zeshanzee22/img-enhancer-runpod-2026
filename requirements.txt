@@ -1,7 +1,8 @@
-runpod==1.8.1
-numpy==2.2.6
-Pillow==12.0.0
-transformers==5.6.1
-cloudinary==1.44.2
-requests==2.32.5
-python-dotenv==1.2.1
+runpod==1.7.0
+numpy==1.26.4
+Pillow==10.4.0
+transformers==4.44.2
+accelerate==0.33.0
+cloudinary==1.41.0
+requests==2.32.3
+python-dotenv==1.0.1
